@@ -193,7 +193,6 @@ func BenchmarkLayerRun(b *testing.B) {
 	for i := 0; i < 100; i++ {
 		mw.Use(RequestPhase, func(h http.Handler) http.Handler {
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.Header().Set("foo", string(i))
 				h.ServeHTTP(w, r)
 			})
 		})
@@ -210,7 +209,6 @@ func BenchmarkStackLayers(b *testing.B) {
 
 	handler := func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("foo", "bar")
 			h.ServeHTTP(w, r)
 		})
 	}

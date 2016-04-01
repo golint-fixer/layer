@@ -50,10 +50,10 @@ type Pluggable interface {
 // Middleware especifies the required interface that must be
 // implemented by third-party middleware capable interfaces.
 type Middleware interface {
-	// Middleware embeds Runnable and Pluggable interfaces.
+	// Middleware is also a Runnable interface.
 	Runnable
+	// Middleware is also a Pluggable interface.
 	Pluggable
-
 	// Flush flushed the middleware handlers pool.
 	Flush()
 }
@@ -64,16 +64,19 @@ type Pool map[string]*Stack
 // Layer type represent an HTTP domain
 // specific middleware layer with hieritance support.
 type Layer struct {
-	// stack stores the plugins registered in the current middleware instance.
-	Pool Pool
-
 	// finalHandler stores the final middleware chain handler.
 	finalHandler http.Handler
+
+	// memo stores the memoized middleware call chain by specific phase.
+	memo map[string]http.Handler
+
+	// stack stores the plugins registered in the current middleware instance.
+	Pool Pool
 }
 
 // New creates a new middleware layer.
 func New() *Layer {
-	return &Layer{Pool: make(Pool), finalHandler: FinalHandler}
+	return &Layer{Pool: make(Pool), memo: make(map[string]http.Handler), finalHandler: FinalHandler}
 }
 
 // Flush flushes the plugins stack.
@@ -98,7 +101,12 @@ func (s *Layer) UseFinalHandler(fn http.Handler) {
 	s.finalHandler = fn
 }
 
+// register is used internally to register one or multiple middleware handlers
+// in the middleware pool in the given phase and ordered by the given priority.
 func (s *Layer) register(phase string, priority Priority, handler ...interface{}) *Layer {
+	// Flush the memoized trigger function
+	s.memo[phase] = nil
+
 	if s.Pool[phase] == nil {
 		s.Pool[phase] = &Stack{}
 	}
@@ -124,6 +132,7 @@ func (s *Layer) register(phase string, priority Priority, handler ...interface{}
 
 // Run triggers the middleware call chain for the given phase.
 func (s *Layer) Run(phase string, w http.ResponseWriter, r *http.Request, h http.Handler) {
+	// In case of panic we want to handle it accordingly
 	defer func() {
 		if phase == "error" {
 			return
@@ -134,20 +143,33 @@ func (s *Layer) Run(phase string, w http.ResponseWriter, r *http.Request, h http
 		}
 	}()
 
+	// Check memoized function to avoid recurrent tasks
+	if h, ok := s.memo[phase]; !ok && h != nil {
+		h.ServeHTTP(w, r)
+		return
+	}
+
+	// Use default final handler if no one is passed
 	if h == nil {
 		h = s.finalHandler
 	}
 
+	// Get registered middleware handlers for the current phase
 	stack := s.Pool[phase]
 	if stack == nil {
 		h.ServeHTTP(w, r)
 		return
 	}
 
+	// Build the middleware handlers call chain
 	queue := stack.Join()
 	for i := len(queue) - 1; i >= 0; i-- {
 		h = queue[i](h)
 	}
 
+	// Memoize the phase trigger function
+	s.memo[phase] = h
+
+	// Trigger the first handler
 	h.ServeHTTP(w, r)
 }
