@@ -17,10 +17,22 @@ type HandlerFuncNext func(w http.ResponseWriter, r *http.Request, h http.Handler
 // MiddlewareFunc represents the vinci's middleware capable interface.
 type MiddlewareFunc func(h http.Handler) http.Handler
 
-// Plugin represents the required interface.
-type Plugin interface {
+// Registrable represents the required interface implemented by middleware capable handlers
+// to register one or multiple middleware phases.
+//
+// This is mostly used as inversion of control mecanish allowing to third-party middleware
+// implementors the ability to register multiple middleware handlers transparently.
+//
+// For instance, you can register request and error handlers:
+//
+//   func (s *MyStruct) Register(mw layer.Pluggable) {
+//      mw.Use("request", s.requestHandler)
+//      mw.Use("error", s.errorHandler)
+//   }
+//
+type Registrable interface {
 	// Register is designed to allow the plugin developers
-	// to attach multiple middleware layers.
+	// to attach multiple middleware layers passing the current middleware layer.
 	Register(Pluggable)
 }
 

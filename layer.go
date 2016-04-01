@@ -86,12 +86,12 @@ func (s *Layer) Flush() {
 
 // Use registers a new request handler in the middleware stack.
 func (s *Layer) Use(phase string, handler ...interface{}) {
-	s.register(phase, Normal, handler...)
+	s.use(phase, Normal, handler...)
 }
 
 // UsePriority registers a new request handler in the middleware stack with the given priority.
 func (s *Layer) UsePriority(phase string, priority Priority, handler ...interface{}) {
-	s.register(phase, priority, handler...)
+	s.use(phase, priority, handler...)
 }
 
 // UseFinalHandler uses a new http.Handler as final middleware call chain handler.
@@ -101,9 +101,9 @@ func (s *Layer) UseFinalHandler(fn http.Handler) {
 	s.finalHandler = fn
 }
 
-// register is used internally to register one or multiple middleware handlers
+// use is used internally to register one or multiple middleware handlers
 // in the middleware pool in the given phase and ordered by the given priority.
-func (s *Layer) register(phase string, priority Priority, handler ...interface{}) *Layer {
+func (s *Layer) use(phase string, priority Priority, handler ...interface{}) *Layer {
 	// Flush the memoized trigger function
 	s.memo[phase] = nil
 
@@ -111,23 +111,29 @@ func (s *Layer) register(phase string, priority Priority, handler ...interface{}
 		s.Pool[phase] = &Stack{}
 	}
 
-	pool := s.Pool[phase]
+	stack := s.Pool[phase]
 	for _, h := range handler {
-		// Vinci's plugin interface
-		if mw, ok := h.(Plugin); ok {
-			mw.Register(s)
-			continue
-		}
-
-		// Otherwise infer function interface
-		mw := AdaptFunc(h)
-		if mw == nil {
-			panic("vinci: unsupported middleware interface")
-		}
-		pool.Push(priority, mw)
+		register(s, stack, priority, h)
 	}
 
 	return s
+}
+
+// register infers the handler interface and registers it in the given middleware stack.
+func register(layer *Layer, stack *Stack, priority Priority, handler interface{}) {
+	// Vinci's registrable interface
+	if r, ok := handler.(Registrable); ok {
+		r.Register(layer)
+		return
+	}
+
+	// Otherwise infer the function interface
+	mw := AdaptFunc(handler)
+	if mw == nil {
+		panic("vinci: unsupported middleware interface")
+	}
+
+	stack.Push(priority, mw)
 }
 
 // Run triggers the middleware call chain for the given phase.
