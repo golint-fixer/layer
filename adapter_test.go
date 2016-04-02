@@ -2,14 +2,14 @@ package layer
 
 import (
 	"github.com/nbio/st"
-	"gopkg.in/vinci-proxy/utils.v0"
+	"gopkg.in/vinxi/utils.v0"
 	"net/http"
 	"testing"
 )
 
-type vinciHandler struct{}
+type vinxiHandler struct{}
 
-func (vh vinciHandler) HandleHTTP(w http.ResponseWriter, r *http.Request, h http.Handler) {
+func (vh vinxiHandler) HandleHTTP(w http.ResponseWriter, r *http.Request, h http.Handler) {
 	w.Header().Set("foo", "bar")
 	h.ServeHTTP(w, r)
 }
@@ -79,7 +79,7 @@ func TestStandardHttpHandler(t *testing.T) {
 }
 
 func TestVinciHandler(t *testing.T) {
-	middlewareFunc := vinciHandler{}
+	middlewareFunc := vinxiHandler{}
 
 	w := utils.NewWriterStub()
 	req := &http.Request{}

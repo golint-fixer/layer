@@ -14,7 +14,7 @@ type HandlerFunc func(http.ResponseWriter, *http.Request)
 // HandlerFuncNext represents a Negroni-like handler function notation.
 type HandlerFuncNext func(w http.ResponseWriter, r *http.Request, h http.Handler)
 
-// MiddlewareFunc represents the vinci's middleware capable interface.
+// MiddlewareFunc represents the vinxi's middleware capable interface.
 type MiddlewareFunc func(h http.Handler) http.Handler
 
 // Registrable represents the required interface implemented by middleware capable handlers

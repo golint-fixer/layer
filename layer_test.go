@@ -2,7 +2,7 @@ package layer
 
 import (
 	"github.com/nbio/st"
-	"gopkg.in/vinci-proxy/utils.v0"
+	"gopkg.in/vinxi/utils.v0"
 	"net/http"
 	"testing"
 )
@@ -48,7 +48,7 @@ func TestNoHandlerRegistered(t *testing.T) {
 	mw.Run("request", w, req, nil)
 
 	st.Expect(t, w.Code, 502)
-	st.Expect(t, w.Body, []byte("vinci: no route configured"))
+	st.Expect(t, w.Body, []byte("vinxi: no route configured"))
 }
 
 func TestFinalErrorHandling(t *testing.T) {
@@ -67,7 +67,7 @@ func TestFinalErrorHandling(t *testing.T) {
 	mw.Run("request", w, req, nil)
 
 	st.Expect(t, w.Code, 500)
-	st.Expect(t, w.Body, []byte("vinci: internal server error"))
+	st.Expect(t, w.Body, []byte("vinxi: internal server error"))
 }
 
 func TestUseFinalHandler(t *testing.T) {
@@ -75,7 +75,7 @@ func TestUseFinalHandler(t *testing.T) {
 
 	mw.UseFinalHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(503)
-		w.Write([]byte("vinci: service unavailable"))
+		w.Write([]byte("vinxi: service unavailable"))
 	}))
 
 	w := utils.NewWriterStub()
@@ -83,7 +83,7 @@ func TestUseFinalHandler(t *testing.T) {
 	mw.Run("request", w, req, nil)
 
 	st.Expect(t, w.Code, 503)
-	st.Expect(t, w.Body, []byte("vinci: service unavailable"))
+	st.Expect(t, w.Body, []byte("vinxi: service unavailable"))
 }
 
 func TestRegisterPlugin(t *testing.T) {
@@ -109,7 +109,7 @@ func TestRegisterPlugin(t *testing.T) {
 func TestRegisterUnsupportedInterface(t *testing.T) {
 	defer func() {
 		r := recover()
-		st.Expect(t, r, "vinci: unsupported middleware interface")
+		st.Expect(t, r, "vinxi: unsupported middleware interface")
 	}()
 
 	mw := New()
@@ -122,7 +122,7 @@ func TestUsePriority(t *testing.T) {
 
 	mw.UseFinalHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(503)
-		w.Write([]byte("vinci: service unavailable"))
+		w.Write([]byte("vinxi: service unavailable"))
 	}))
 
 	array := []int{}

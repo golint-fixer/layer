@@ -1,9 +1,9 @@
 // Package layer implements a simple HTTP server middleware layer
-// used internally by vinci to compose and trigger the middleware chain.
+// used internally by vinxi to compose and trigger the middleware chain.
 package layer
 
 import (
-	"gopkg.in/vinci-proxy/context.v0"
+	"gopkg.in/vinxi/context.v0"
 	"net/http"
 )
 
@@ -19,14 +19,14 @@ const (
 // You can customize this handler in order to reply with a default error response.
 var FinalHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(502)
-	w.Write([]byte("vinci: no route configured"))
+	w.Write([]byte("vinxi: no route configured"))
 })
 
 // FinalErrorHandler stores the default http.Handler used as final middleware chain.
 // You can customize this handler in order to reply with a default error response.
 var FinalErrorHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(500)
-	w.Write([]byte("vinci: internal server error"))
+	w.Write([]byte("vinxi: internal server error"))
 })
 
 // Runnable represents the required interface for a runnable
@@ -130,7 +130,7 @@ func register(layer *Layer, stack *Stack, priority Priority, handler interface{}
 	// Otherwise infer the function interface
 	mw := AdaptFunc(handler)
 	if mw == nil {
-		panic("vinci: unsupported middleware interface")
+		panic("vinxi: unsupported middleware interface")
 	}
 
 	stack.Push(priority, mw)
