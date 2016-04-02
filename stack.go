@@ -4,16 +4,24 @@ package layer
 type Priority int
 
 const (
-	// Head priority defines the middleware handlers
-	// in the head of the middleware stack.
-	Head Priority = iota
+	// TopHead priority defines the middleware handler
+	// as first element of the stack head.
+	TopHead Priority = iota
 
-	// Normal priority defines the middleware handlers
-	// in the last middleware stack available.
+	// Head priority stores the middleware handler
+	// in the head of the stack.
+	Head
+
+	// Normal priority defines the middleware handler
+	// in the last stack available.
 	Normal
 
-	// Tail priority defines the middleware handlers
-	// in the tail of the middleware stack.
+	// TopTail priority defines the middleware handler
+	// as fist element of the stack tail.
+	TopTail
+
+	// Tail priority defines the middleware handler
+	// in the tail of the stack.
 	Tail
 )
 
@@ -35,11 +43,19 @@ type Stack struct {
 // Push pushes a new middleware handler to the stack based on the given priority.
 func (s *Stack) Push(order Priority, h MiddlewareFunc) {
 	s.memo = nil // flush the memoized stack
+	if order == TopHead {
+		s.Head = append([]MiddlewareFunc{h}, s.Head...)
+	}
 	if order == Head {
 		s.Head = append(s.Head, h)
-	} else if order == Tail {
+	}
+	if order == Tail {
 		s.Tail = append(s.Tail, h)
-	} else {
+	}
+	if order == TopTail {
+		s.Tail = append([]MiddlewareFunc{h}, s.Tail...)
+	}
+	if order == Normal {
 		s.Stack = append(s.Stack, h)
 	}
 }
