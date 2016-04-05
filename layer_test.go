@@ -48,7 +48,7 @@ func TestNoHandlerRegistered(t *testing.T) {
 	mw.Run("request", w, req, nil)
 
 	st.Expect(t, w.Code, 502)
-	st.Expect(t, w.Body, []byte("vinxi: no route configured"))
+	st.Expect(t, string(w.Body), "vinxi: cannot route request")
 }
 
 func TestFinalErrorHandling(t *testing.T) {
@@ -192,9 +192,7 @@ func BenchmarkLayerRun(b *testing.B) {
 	mw := New()
 	for i := 0; i < 100; i++ {
 		mw.Use(RequestPhase, func(h http.Handler) http.Handler {
-			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				h.ServeHTTP(w, r)
-			})
+			return http.HandlerFunc(h.ServeHTTP)
 		})
 	}
 
@@ -208,9 +206,7 @@ func BenchmarkStackLayers(b *testing.B) {
 	req := &http.Request{}
 
 	handler := func(h http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			h.ServeHTTP(w, r)
-		})
+		return http.HandlerFunc(h.ServeHTTP)
 	}
 
 	mw := New()

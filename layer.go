@@ -19,7 +19,7 @@ const (
 // You can customize this handler in order to reply with a default error response.
 var FinalHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(502)
-	w.Write([]byte("vinxi: no route configured"))
+	w.Write([]byte("vinxi: cannot route request"))
 })
 
 // FinalErrorHandler stores the default http.Handler used as final middleware chain.
