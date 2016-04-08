@@ -10,7 +10,6 @@ import (
 const (
 	// ErrorPhase defines error middleware phase idenfitier.
 	ErrorPhase = "error"
-
 	// RequestPhase defines the default middleware phase for request.
 	RequestPhase = "request"
 )
@@ -39,12 +38,12 @@ type Runnable interface {
 type Pluggable interface {
 	// Use method is used to register a new middleware handler in the stack.
 	Use(phase string, handler ...interface{})
-
 	// UsePriority method is used to register a new middleware handler in a specific phase.
 	UsePriority(string, Priority, ...interface{})
-
 	// UseFinalHandler defines the middleware handler terminator
 	UseFinalHandler(handler http.Handler)
+	// SetParent allows hierarchical middleware.
+	SetParent(Middleware)
 }
 
 // Middleware especifies the required interface that must be
@@ -56,8 +55,6 @@ type Middleware interface {
 	Pluggable
 	// Flush flushes the middleware handlers pool.
 	Flush()
-	// SetParent allows hierarchical middleware.
-	SetParent(Middleware)
 }
 
 // Pool represents the phase-specific stack to store middleware functions.
@@ -68,10 +65,8 @@ type Pool map[string]*Stack
 type Layer struct {
 	// finalHandler stores the final middleware chain handler.
 	finalHandler http.Handler
-
 	// parent stores the parent middleware layer to use. Use SetParent(parent).
 	parent Middleware
-
 	// Pool stores the phase-specific middleware handlers stack.
 	Pool Pool
 }
