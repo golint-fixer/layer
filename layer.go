@@ -201,6 +201,6 @@ func (s *Layer) runRecoverError(rerr interface{}, w http.ResponseWriter, r *http
 	})
 
 	// Expose error via context. This may change in a future.
-	context.Set(r, "error", rerr)
+	context.Set(r, "vinxi.error", rerr)
 	s.Run("error", w, r, next)
 }
