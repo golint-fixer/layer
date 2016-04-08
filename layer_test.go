@@ -290,6 +290,41 @@ func TestParentLayerPanic(t *testing.T) {
 	st.Expect(t, string(w.Body), "error")
 }
 
+func TestParentLayerPanicFinalHandler(t *testing.T) {
+	parent := New()
+	mw := New()
+	mw.SetParent(parent)
+
+	parent.Use("error", func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("error", "foo")
+			h.ServeHTTP(w, r)
+		})
+	})
+
+	parent.Use("request", func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("foo", "foo")
+			h.ServeHTTP(w, r)
+		})
+	})
+
+	mw.Use("request", func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			panic("oops")
+		})
+	})
+
+	w := utils.NewWriterStub()
+	req := &http.Request{}
+	mw.Run("request", w, req, nil)
+
+	st.Expect(t, w.Code, 500)
+	st.Expect(t, w.Header().Get("foo"), "foo")
+	st.Expect(t, w.Header().Get("error"), "foo")
+	st.Expect(t, string(w.Body), "vinxi: internal server error")
+}
+
 func BenchmarkLayerRun(b *testing.B) {
 	w := utils.NewWriterStub()
 	req := &http.Request{}
