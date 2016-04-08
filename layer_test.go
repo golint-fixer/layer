@@ -11,7 +11,7 @@ type plugin struct {
 	middleware interface{}
 }
 
-func (p *plugin) Register(mw Pluggable) {
+func (p *plugin) Register(mw Middleware) {
 	mw.Use(RequestPhase, p.middleware)
 }
 
@@ -183,6 +183,111 @@ func TestFlush(t *testing.T) {
 	})
 	mw.Flush()
 	st.Expect(t, mw.Pool, Pool{})
+}
+
+func TestParentLayer(t *testing.T) {
+	parent := New()
+	mw := New()
+	mw.SetParent(parent)
+
+	parent.Use("request", func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("foo", "foo")
+			h.ServeHTTP(w, r)
+		})
+	})
+
+	mw.Use("request", func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("bar", "bar")
+			h.ServeHTTP(w, r)
+		})
+	})
+
+	mw.Use("request", func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(200)
+			w.Write([]byte("hello world"))
+		})
+	})
+
+	w := utils.NewWriterStub()
+	req := &http.Request{}
+	mw.Run("request", w, req, nil)
+
+	st.Expect(t, w.Code, 200)
+	st.Expect(t, w.Header().Get("foo"), "foo")
+	st.Expect(t, w.Header().Get("bar"), "bar")
+	st.Expect(t, string(w.Body), "hello world")
+}
+
+func TestParentLayerStopChain(t *testing.T) {
+	parent := New()
+	mw := New()
+	mw.SetParent(parent)
+
+	parent.Use("request", func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("foo", "foo")
+			h.ServeHTTP(w, r)
+		})
+	})
+
+	parent.Use("request", func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(200)
+			w.Write([]byte("hello world"))
+		})
+	})
+
+	mw.Use("request", func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(500)
+			w.Write([]byte("oops"))
+		})
+	})
+
+	w := utils.NewWriterStub()
+	req := &http.Request{}
+	mw.Run("request", w, req, nil)
+
+	st.Expect(t, w.Code, 200)
+	st.Expect(t, w.Header().Get("foo"), "foo")
+	st.Expect(t, string(w.Body), "hello world")
+}
+
+func TestParentLayerPanic(t *testing.T) {
+	parent := New()
+	mw := New()
+	mw.SetParent(parent)
+
+	parent.Use("error", func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(502)
+			w.Write([]byte("error"))
+		})
+	})
+
+	parent.Use("request", func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("foo", "foo")
+			h.ServeHTTP(w, r)
+		})
+	})
+
+	mw.Use("request", func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			panic("oops")
+		})
+	})
+
+	w := utils.NewWriterStub()
+	req := &http.Request{}
+	mw.Run("request", w, req, nil)
+
+	st.Expect(t, w.Code, 502)
+	st.Expect(t, w.Header().Get("foo"), "foo")
+	st.Expect(t, string(w.Body), "error")
 }
 
 func BenchmarkLayerRun(b *testing.B) {

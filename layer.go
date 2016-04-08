@@ -69,6 +69,9 @@ type Layer struct {
 	// finalHandler stores the final middleware chain handler.
 	finalHandler http.Handler
 
+	// parent stores the parent middleware layer to use. Use SetParent(parent).
+	parent Middleware
+
 	// Pool stores the phase-specific middleware handlers stack.
 	Pool Pool
 }
@@ -98,6 +101,12 @@ func (s *Layer) UsePriority(phase string, priority Priority, handler ...interfac
 // or error (e.g: cannot route the request).
 func (s *Layer) UseFinalHandler(fn http.Handler) {
 	s.finalHandler = fn
+}
+
+// SetParent sets a new middleware layer as parent layer,
+// allowing to trigger ancestors layer from the current one.
+func (s *Layer) SetParent(parent Middleware) {
+	s.parent = parent
 }
 
 // use is used internally to register one or multiple middleware handlers
@@ -133,7 +142,7 @@ func register(layer *Layer, stack *Stack, priority Priority, handler interface{}
 }
 
 // Run triggers the middleware call chain for the given phase.
-// In case of panic, it will be recovered transparently and trigger the error middleware chain.
+// In case of panic, it will be recovered transparently and trigger the error middleware chain.ç
 func (s *Layer) Run(phase string, w http.ResponseWriter, r *http.Request, h http.Handler) {
 	// In case of panic we want to handle it accordingly
 	defer func() {
@@ -141,11 +150,26 @@ func (s *Layer) Run(phase string, w http.ResponseWriter, r *http.Request, h http
 			return
 		}
 		if re := recover(); re != nil {
-			context.Set(r, "error", re) // Expose error via context. This may change in a future.
-			s.Run("error", w, r, FinalErrorHandler)
+			s.runRecoverError(re, w, r)
 		}
 	}()
 
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		s.run(phase, w, r, h)
+	})
+
+	// Run parent layer for the given phase, if present
+	if s.parent != nil && phase != "error" {
+		s.parent.Run(phase, w, r, next)
+		return
+	}
+
+	// Otherwise run the current layer
+	next.ServeHTTP(w, r)
+}
+
+// run runs the current layer middleware chain for the given phase.
+func (s *Layer) run(phase string, w http.ResponseWriter, r *http.Request, h http.Handler) {
 	// Use default final handler if no one is passed
 	if h == nil {
 		h = s.finalHandler
@@ -164,6 +188,24 @@ func (s *Layer) Run(phase string, w http.ResponseWriter, r *http.Request, h http
 		h = queue[i](h)
 	}
 
-	// Trigger the first handler
+	// Trigger the first middleware handler
 	h.ServeHTTP(w, r)
+}
+
+// runRecoverError runs the current layer error phase middleware chain
+// triggering the parent layer if necessary.
+func (s *Layer) runRecoverError(rerr interface{}, w http.ResponseWriter, r *http.Request) {
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// If no parent, run default the final handler
+		if s.parent == nil {
+			FinalErrorHandler.ServeHTTP(w, r)
+			return
+		}
+		// If parent layer, trigger it
+		s.parent.Run("error", w, r, FinalErrorHandler)
+	})
+
+	// Expose error via context. This may change in a future.
+	context.Set(r, "error", rerr)
+	s.Run("error", w, r, next)
 }
