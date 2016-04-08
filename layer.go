@@ -69,7 +69,7 @@ type Layer struct {
 	// finalHandler stores the final middleware chain handler.
 	finalHandler http.Handler
 
-	// stack stores the plugins registered in the current middleware instance.
+	// Pool stores the phase-specific middleware handlers stack.
 	Pool Pool
 }
 
@@ -78,22 +78,22 @@ func New() *Layer {
 	return &Layer{Pool: make(Pool), finalHandler: FinalHandler}
 }
 
-// Flush flushes the plugins stack.
+// Flush flushes the middleware pool.
 func (s *Layer) Flush() {
-	s.Pool = Pool{}
+	s.Pool = make(Pool)
 }
 
-// Use registers a new request handler in the middleware stack.
+// Use registers new handlers for the given phase in the middleware stack.
 func (s *Layer) Use(phase string, handler ...interface{}) {
 	s.use(phase, Normal, handler...)
 }
 
-// UsePriority registers a new request handler in the middleware stack with the given priority.
+// UsePriority registers new handlers for the given phase in the middleware stack with a custom priority.
 func (s *Layer) UsePriority(phase string, priority Priority, handler ...interface{}) {
 	s.use(phase, priority, handler...)
 }
 
-// UseFinalHandler uses a new http.Handler as final middleware call chain handler.
+// UseFinalHandler defines an http.Handler as final middleware call chain handler.
 // This handler is tipically responsible of replying with a custom response
 // or error (e.g: cannot route the request).
 func (s *Layer) UseFinalHandler(fn http.Handler) {
@@ -133,6 +133,7 @@ func register(layer *Layer, stack *Stack, priority Priority, handler interface{}
 }
 
 // Run triggers the middleware call chain for the given phase.
+// In case of panic, it will be recovered transparently and trigger the error middleware chain.
 func (s *Layer) Run(phase string, w http.ResponseWriter, r *http.Request, h http.Handler) {
 	// In case of panic we want to handle it accordingly
 	defer func() {
@@ -140,7 +141,7 @@ func (s *Layer) Run(phase string, w http.ResponseWriter, r *http.Request, h http
 			return
 		}
 		if re := recover(); re != nil {
-			context.Set(r, "error", re)
+			context.Set(r, "error", re) // Expose error via context. This may change in a future.
 			s.Run("error", w, r, FinalErrorHandler)
 		}
 	}()
