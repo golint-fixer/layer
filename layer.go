@@ -3,8 +3,9 @@
 package layer
 
 import (
-	"gopkg.in/vinxi/context.v0"
 	"net/http"
+
+	"gopkg.in/vinxi/context.v0"
 )
 
 const (
@@ -154,7 +155,7 @@ func (s *Layer) Run(phase string, w http.ResponseWriter, r *http.Request, h http
 	})
 
 	// Run parent layer for the given phase, if present
-	if s.parent != nil && phase != "error" {
+	if s.parent != nil {
 		s.parent.Run(phase, w, r, next)
 		return
 	}
@@ -191,16 +192,16 @@ func (s *Layer) run(phase string, w http.ResponseWriter, r *http.Request, h http
 // triggering the parent layer if necessary.
 func (s *Layer) runRecoverError(rerr interface{}, w http.ResponseWriter, r *http.Request) {
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// If no parent, run default the final handler
+		// If no parent, run default error final handler
 		if s.parent == nil {
 			FinalErrorHandler.ServeHTTP(w, r)
 			return
 		}
-		// If parent layer, trigger it
+		// If parent layer exists, trigger it
 		s.parent.Run("error", w, r, FinalErrorHandler)
 	})
 
 	// Expose error via context. This may change in a future.
 	context.Set(r, "vinxi.error", rerr)
-	s.Run("error", w, r, next)
+	s.run("error", w, r, next)
 }

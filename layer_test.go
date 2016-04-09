@@ -1,10 +1,11 @@
 package layer
 
 import (
-	"github.com/nbio/st"
-	"gopkg.in/vinxi/utils.v0"
 	"net/http"
 	"testing"
+
+	"github.com/nbio/st"
+	"gopkg.in/vinxi/utils.v0"
 )
 
 type plugin struct {
@@ -322,6 +323,50 @@ func TestParentLayerPanicFinalHandler(t *testing.T) {
 	st.Expect(t, w.Code, 500)
 	st.Expect(t, w.Header().Get("foo"), "foo")
 	st.Expect(t, w.Header().Get("error"), "foo")
+	st.Expect(t, string(w.Body), "vinxi: internal server error")
+}
+
+func TestParentLayerChildPanicHandler(t *testing.T) {
+	parent := New()
+	mw := New()
+	mw.SetParent(parent)
+
+	// Just discovered that this won't be called since seems like
+	// Go only triggers the top panic recover handler.
+	mw.Use("error", func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("error", "child")
+			h.ServeHTTP(w, r)
+		})
+	})
+
+	parent.Use("error", func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("error", "parent")
+			h.ServeHTTP(w, r)
+		})
+	})
+
+	parent.Use("request", func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("foo", "foo")
+			h.ServeHTTP(w, r)
+		})
+	})
+
+	mw.Use("request", func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			panic("oops")
+		})
+	})
+
+	w := utils.NewWriterStub()
+	req := &http.Request{}
+	mw.Run("request", w, req, nil)
+
+	st.Expect(t, w.Code, 500)
+	st.Expect(t, w.Header().Get("foo"), "foo")
+	st.Expect(t, w.Header().Get("error"), "parent")
 	st.Expect(t, string(w.Body), "vinxi: internal server error")
 }
 
