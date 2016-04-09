@@ -28,7 +28,7 @@ type MiddlewareHandlerFunc func(http.Handler) func(http.ResponseWriter, *http.Re
 //
 // For instance, you can register request and error handlers:
 //
-//   func (s *MyStruct) Register(mw layer.Pluggable) {
+//   func (s *MyStruct) Register(mw layer.Middleware) {
 //      mw.Use("request", s.requestHandler)
 //      mw.Use("error", s.errorHandler)
 //   }
@@ -36,7 +36,7 @@ type MiddlewareHandlerFunc func(http.Handler) func(http.ResponseWriter, *http.Re
 type Registrable interface {
 	// Register is designed to allow the plugin developers
 	// to attach multiple middleware layers passing the current middleware layer.
-	Register(Pluggable)
+	Register(Middleware)
 }
 
 // AdaptFunc adapts the given function polumorphic interface
