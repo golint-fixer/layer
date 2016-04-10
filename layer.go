@@ -19,14 +19,14 @@ const (
 // You can customize this handler in order to reply with a default error response.
 var FinalHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(502)
-	w.Write([]byte("vinxi: cannot route request"))
+	w.Write([]byte("bad gateway"))
 })
 
 // FinalErrorHandler stores the default http.Handler used as final middleware chain.
 // You can customize this handler in order to reply with a default error response.
 var FinalErrorHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(500)
-	w.Write([]byte("vinxi: internal server error"))
+	w.Write([]byte("proxy error"))
 })
 
 // Runnable represents the required interface for a runnable
@@ -43,7 +43,7 @@ type Pluggable interface {
 	UsePriority(string, Priority, ...interface{})
 	// UseFinalHandler defines the middleware handler terminator
 	UseFinalHandler(handler http.Handler)
-	// SetParent allows hierarchical middleware.
+	// SetParent allows hierarchical middleware inheritance.
 	SetParent(Middleware)
 }
 
