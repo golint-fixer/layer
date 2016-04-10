@@ -49,7 +49,7 @@ func TestNoHandlerRegistered(t *testing.T) {
 	mw.Run("request", w, req, nil)
 
 	st.Expect(t, w.Code, 502)
-	st.Expect(t, string(w.Body), "vinxi: cannot route request")
+	st.Expect(t, string(w.Body), "Bad Gateway")
 }
 
 func TestFinalErrorHandling(t *testing.T) {
@@ -68,7 +68,7 @@ func TestFinalErrorHandling(t *testing.T) {
 	mw.Run("request", w, req, nil)
 
 	st.Expect(t, w.Code, 500)
-	st.Expect(t, w.Body, []byte("vinxi: internal server error"))
+	st.Expect(t, string(w.Body), "Proxy Error")
 }
 
 func TestUseFinalHandler(t *testing.T) {
@@ -84,7 +84,7 @@ func TestUseFinalHandler(t *testing.T) {
 	mw.Run("request", w, req, nil)
 
 	st.Expect(t, w.Code, 503)
-	st.Expect(t, w.Body, []byte("vinxi: service unavailable"))
+	st.Expect(t, string(w.Body), "vinxi: service unavailable")
 }
 
 func TestRegisterPlugin(t *testing.T) {
@@ -323,7 +323,7 @@ func TestParentLayerPanicFinalHandler(t *testing.T) {
 	st.Expect(t, w.Code, 500)
 	st.Expect(t, w.Header().Get("foo"), "foo")
 	st.Expect(t, w.Header().Get("error"), "foo")
-	st.Expect(t, string(w.Body), "vinxi: internal server error")
+	st.Expect(t, string(w.Body), "Proxy Error")
 }
 
 func TestParentLayerChildPanicHandler(t *testing.T) {
@@ -367,7 +367,7 @@ func TestParentLayerChildPanicHandler(t *testing.T) {
 	st.Expect(t, w.Code, 500)
 	st.Expect(t, w.Header().Get("foo"), "foo")
 	st.Expect(t, w.Header().Get("error"), "parent")
-	st.Expect(t, string(w.Body), "vinxi: internal server error")
+	st.Expect(t, string(w.Body), "Proxy Error")
 }
 
 func BenchmarkLayerRun(b *testing.B) {

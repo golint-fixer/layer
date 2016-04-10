@@ -19,14 +19,14 @@ const (
 // You can customize this handler in order to reply with a default error response.
 var FinalHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(502)
-	w.Write([]byte("bad gateway"))
+	w.Write([]byte("Bad Gateway"))
 })
 
 // FinalErrorHandler stores the default http.Handler used as final middleware chain.
 // You can customize this handler in order to reply with a default error response.
 var FinalErrorHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(500)
-	w.Write([]byte("proxy error"))
+	w.Write([]byte("Proxy Error"))
 })
 
 // Runnable represents the required interface for a runnable
