@@ -2,10 +2,17 @@ package layer
 
 import "net/http"
 
-// Handler represents an optional supported interface that could be implemented
-// by middleware handlers.
+// Handler represents the vinxi specific supported interface
+// that can be implemented by middleware handlers.
 type Handler interface {
 	HandleHTTP(http.ResponseWriter, *http.Request, http.Handler)
+}
+
+// PartialHandler represents the vinxi specific supported interface
+// that applies partial function application and can be implemented
+// by middleware handlers.
+type PartialHandler interface {
+	HandleHTTP(http.Handler) func(http.ResponseWriter, *http.Request)
 }
 
 // HandlerFunc represents the required function interface for simple middleware handlers.
@@ -45,7 +52,7 @@ type Registrable interface {
 // Currently support five different interface notations,
 // wrapping it accordingly to make homogeneus.
 func AdaptFunc(h interface{}) MiddlewareFunc {
-	// Vinci/Alice interface
+	// Vinxi/Alice interface
 	if mw, ok := h.(func(h http.Handler) http.Handler); ok {
 		return MiddlewareFunc(mw)
 	}
@@ -70,9 +77,14 @@ func AdaptFunc(h interface{}) MiddlewareFunc {
 		return adaptNativeHandler(mw)
 	}
 
-	// Vinci's built-in handler
+	// Vinxi's built-in handler interface
 	if mw, ok := h.(Handler); ok {
 		return adaptHandler(mw)
+	}
+
+	// Vinxi's built-in partial handler interface
+	if mw, ok := h.(PartialHandler); ok {
+		return adaptPartialHandler(mw)
 	}
 
 	return nil
@@ -102,6 +114,15 @@ func adaptHandler(fn Handler) MiddlewareFunc {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			fn.HandleHTTP(w, r, h)
+		})
+	}
+}
+
+func adaptPartialHandler(fn PartialHandler) MiddlewareFunc {
+	return func(h http.Handler) http.Handler {
+		next := fn.HandleHTTP(h)
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			next(w, r)
 		})
 	}
 }
