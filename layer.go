@@ -155,7 +155,7 @@ func (s *Layer) Run(phase string, w http.ResponseWriter, r *http.Request, h http
 	})
 
 	// Run parent layer for the given phase, if present
-	if s.parent != nil {
+	if phase != RequestPhase && s.parent != nil {
 		s.parent.Run(phase, w, r, next)
 		return
 	}

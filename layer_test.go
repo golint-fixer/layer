@@ -191,21 +191,21 @@ func TestParentLayer(t *testing.T) {
 	mw := New()
 	mw.SetParent(parent)
 
-	parent.Use("request", func(h http.Handler) http.Handler {
+	parent.Use("foo", func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("foo", "foo")
 			h.ServeHTTP(w, r)
 		})
 	})
 
-	mw.Use("request", func(h http.Handler) http.Handler {
+	mw.Use("foo", func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("bar", "bar")
 			h.ServeHTTP(w, r)
 		})
 	})
 
-	mw.Use("request", func(h http.Handler) http.Handler {
+	mw.Use("foo", func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(200)
 			w.Write([]byte("hello world"))
@@ -214,7 +214,7 @@ func TestParentLayer(t *testing.T) {
 
 	w := utils.NewWriterStub()
 	req := &http.Request{}
-	mw.Run("request", w, req, nil)
+	mw.Run("foo", w, req, nil)
 
 	st.Expect(t, w.Code, 200)
 	st.Expect(t, w.Header().Get("foo"), "foo")
@@ -227,21 +227,21 @@ func TestParentLayerStopChain(t *testing.T) {
 	mw := New()
 	mw.SetParent(parent)
 
-	parent.Use("request", func(h http.Handler) http.Handler {
+	parent.Use("foo", func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("foo", "foo")
 			h.ServeHTTP(w, r)
 		})
 	})
 
-	parent.Use("request", func(h http.Handler) http.Handler {
+	parent.Use("foo", func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(200)
 			w.Write([]byte("hello world"))
 		})
 	})
 
-	mw.Use("request", func(h http.Handler) http.Handler {
+	mw.Use("foo", func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(500)
 			w.Write([]byte("oops"))
@@ -250,7 +250,7 @@ func TestParentLayerStopChain(t *testing.T) {
 
 	w := utils.NewWriterStub()
 	req := &http.Request{}
-	mw.Run("request", w, req, nil)
+	mw.Run("foo", w, req, nil)
 
 	st.Expect(t, w.Code, 200)
 	st.Expect(t, w.Header().Get("foo"), "foo")
@@ -269,14 +269,14 @@ func TestParentLayerPanic(t *testing.T) {
 		})
 	})
 
-	parent.Use("request", func(h http.Handler) http.Handler {
+	parent.Use("foo", func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("foo", "foo")
 			h.ServeHTTP(w, r)
 		})
 	})
 
-	mw.Use("request", func(h http.Handler) http.Handler {
+	mw.Use("foo", func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			panic("oops")
 		})
@@ -284,7 +284,7 @@ func TestParentLayerPanic(t *testing.T) {
 
 	w := utils.NewWriterStub()
 	req := &http.Request{}
-	mw.Run("request", w, req, nil)
+	mw.Run("foo", w, req, nil)
 
 	st.Expect(t, w.Code, 502)
 	st.Expect(t, w.Header().Get("foo"), "foo")
@@ -303,14 +303,14 @@ func TestParentLayerPanicFinalHandler(t *testing.T) {
 		})
 	})
 
-	parent.Use("request", func(h http.Handler) http.Handler {
+	parent.Use("foo", func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("foo", "foo")
 			h.ServeHTTP(w, r)
 		})
 	})
 
-	mw.Use("request", func(h http.Handler) http.Handler {
+	mw.Use("foo", func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			panic("oops")
 		})
@@ -318,7 +318,7 @@ func TestParentLayerPanicFinalHandler(t *testing.T) {
 
 	w := utils.NewWriterStub()
 	req := &http.Request{}
-	mw.Run("request", w, req, nil)
+	mw.Run("foo", w, req, nil)
 
 	st.Expect(t, w.Code, 500)
 	st.Expect(t, w.Header().Get("foo"), "foo")
@@ -347,14 +347,14 @@ func TestParentLayerChildPanicHandler(t *testing.T) {
 		})
 	})
 
-	parent.Use("request", func(h http.Handler) http.Handler {
+	parent.Use("foo", func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("foo", "foo")
 			h.ServeHTTP(w, r)
 		})
 	})
 
-	mw.Use("request", func(h http.Handler) http.Handler {
+	mw.Use("foo", func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			panic("oops")
 		})
@@ -362,7 +362,7 @@ func TestParentLayerChildPanicHandler(t *testing.T) {
 
 	w := utils.NewWriterStub()
 	req := &http.Request{}
-	mw.Run("request", w, req, nil)
+	mw.Run("foo", w, req, nil)
 
 	st.Expect(t, w.Code, 500)
 	st.Expect(t, w.Header().Get("foo"), "foo")
